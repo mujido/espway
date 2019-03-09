@@ -19,25 +19,24 @@
 extern "C" {
 #include <string.h>
 #include <espressif/esp_common.h>
+#include <httpd/httpd.h>
 }
-#include <lwip/altcp.h>
-#include <lwip/tcpip.h>
-#include <lwip/apps/httpd.h>
+
 
 #include "lib/locks.h"
 #include "espway.h"
 
-static void httpd_websocket_save_config(struct altcp_pcb *pcb)
+static void httpd_websocket_save_config(struct tcp_pcb *pcb)
 {
   uint8_t response;
   if (save_flash_config())
     response = RES_SAVE_CONFIG_SUCCESS;
   else
     response = RES_SAVE_CONFIG_FAILURE;
-  httpd_websocket_write(pcb, &response, 1, WS_BIN_MODE);
+  websocket_write(pcb, &response, 1, WS_BIN_MODE);
 }
 
-static bool httpd_websocket_clear_config(struct altcp_pcb *pcb)
+static bool httpd_websocket_clear_config(struct tcp_pcb *pcb)
 {
   uint8_t response;
   // Clear the configuration by writing config version zero
@@ -51,11 +50,11 @@ static bool httpd_websocket_clear_config(struct altcp_pcb *pcb)
   {
     response = RES_CLEAR_CONFIG_FAILURE;
   }
-  httpd_websocket_write(pcb, &response, 1, WS_BIN_MODE);
+  websocket_write(pcb, &response, 1, WS_BIN_MODE);
   return success;
 }
 
-static void send_pid_params(struct altcp_pcb *pcb, pid_controller_index idx)
+static void send_pid_params(struct tcp_pcb *pcb, pid_controller_index idx)
 {
   uint8_t buf[14];
   buf[0] = RES_PID_PARAMS;
@@ -67,10 +66,10 @@ static void send_pid_params(struct altcp_pcb *pcb, pid_controller_index idx)
     params[1] = my_config.pid_coeffs_arr[idx].i;
     params[2] = my_config.pid_coeffs_arr[idx].d;
   }
-  httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+  websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-static void send_orientation(struct altcp_pcb *pcb)
+static void send_orientation(struct tcp_pcb *pcb)
 {
   uint8_t buf[5];
   buf[0] = RES_ORIENTATION;
@@ -78,10 +77,10 @@ static void send_orientation(struct altcp_pcb *pcb)
   orientation my_orientation = get_orientation();
   qdata[0] = my_orientation.sin_pitch / 2;
   qdata[1] = my_orientation.sin_roll / 2;
-  httpd_websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
+  websocket_write(pcb, buf, sizeof(buf), WS_BIN_MODE);
 }
 
-static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
+static void httpd_websocket_cb(struct tcp_pcb *pcb, uint8_t *data,
                          uint16_t data_len, uint8_t mode)
 {
   if (data_len == 0 || mode != WS_BIN_MODE) return;
@@ -120,7 +119,7 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
         update_pid_controller(pid_index, i32_data[0], i32_data[1],
             i32_data[2]);
         res = RES_SET_PID_PARAMS_ACK;
-        httpd_websocket_write(pcb, &res, 1, WS_BIN_MODE);
+        websocket_write(pcb, &res, 1, WS_BIN_MODE);
       }
 
       break;
@@ -137,7 +136,7 @@ static void httpd_websocket_cb(struct altcp_pcb *pcb, uint8_t *data,
       if (data_len != 0) break;
       load_config();
       res = RES_LOAD_FLASH_CONFIG_DONE;
-      httpd_websocket_write(pcb, &res, 1, WS_BIN_MODE);
+      websocket_write(pcb, &res, 1, WS_BIN_MODE);
       break;
 
     case REQ_SAVE_CONFIG:
@@ -167,6 +166,7 @@ static void battery_task(void *pvParameter)
       break;
     }
 
+#if 0
     {
       LwipCoreLock lock();
       uint8_t buf[3];
@@ -175,6 +175,7 @@ static void battery_task(void *pvParameter)
       payload[0] = battery_mv;
       httpd_websocket_broadcast(buf, sizeof(buf), WS_BIN_MODE);
     }
+#endif
 
     vTaskDelay(BATTERY_CHECK_INTERVAL / portTICK_PERIOD_MS);
   }
@@ -191,8 +192,8 @@ void httpd_task(void *pvParameters)
   };
   http_set_cgi_handlers(pCGIs, sizeof (pCGIs) / sizeof (pCGIs[0]));
 
-  httpd_websocket_register_callbacks(NULL, (tWsHandler) httpd_websocket_cb);
-  httpd_init();
+  websocket_register_callbacks(NULL, (tWsHandler) httpd_websocket_cb);
+  httpd_websocket_init();
 
   for (;;);
 }

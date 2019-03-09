@@ -39,8 +39,8 @@ static bool probe_for_sensors(const std::vector<uint8_t>& sensors)
   {
     for (size_t j = 0; j < sensors.size(); ++j)
     {
-      if (!sensor_found.at(j) && ultrasonic_sensor_read(sensors.at(j)) > 0)
-        sensor_found.at(j) = true;
+      if (!sensor_found[j] && ultrasonic_sensor_read(sensors[j]) > 0)
+        sensor_found[j] = true;
     }
 
     bool all_found = true;

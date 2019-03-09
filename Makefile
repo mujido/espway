@@ -6,7 +6,7 @@ BUILD_DIR = ./build/
 FIRMWARE_DIR = ./firmware/
 
 ESPBAUD ?= 230400
-FLASH_SIZE ?= 4MB
+FLASH_SIZE ?= 4M
 FLASH_MODE ?= qio
 FLASH_FREQ ?= 80m
 PRINTF_SCANF_FLOAT_SUPPORT ?= 0
@@ -15,11 +15,11 @@ WARNINGS_AS_ERRORS ?= 0
 
 N_PROCESSES = 5
 
-EXTRA_COMPONENTS = extras/dhcpserver extras/i2c extras/i2s_dma extras/ws2812_i2s
+EXTRA_COMPONENTS = extras/dhcpserver extras/i2c extras/i2s_dma extras/ws2812_i2s extras/mbedtls extras/httpd
 
-EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -DHTTPD_FSDATA_FILE="\"fsdata_custom.c\"" \
+EXTRA_C_CXX_FLAGS = -DLWIP_HTTPD_CGI=1 -DHTTPD_USE_CUSTOM_FSDATA \
 	-Isrc -DESP_OPEN_RTOS -DLWIP_HTTPD_SUPPORT_WEBSOCKET=1
-EXTRA_CXXFLAGS = -std=gnu++11
+EXTRA_CXXFLAGS =
 
 # FLAVOR = debug
 # EXTRA_C_CXX_FLAGS += -DLWIP_DEBUG=1 -DHTTPD_DEBUG=LWIP_DBG_ON
@@ -37,6 +37,10 @@ $(FSDATA): $(HTTPD_DIR)makefsdata/makefsdata.c $(HTTPD_DIR)makefsdata/tinydir.h 
 	cd frontend; npm run build
 	tcc -w -I$(lwip_ROOT)include -I$(LWIP_DIR)include -Iesp-open-rtos/core/include \
 		-run $< frontend/output -f:$@
+	sed -i \
+		-e 's!lwip/apps/fs.h!httpd/fs.h!' \
+		-e 's!lwip/def.h!httpd/fsdata.h!' \
+		-e 's!\<fsdata_!httpd_fsdata_!g' $(FSDATA)
 
 clean: clean-fsdata
 
