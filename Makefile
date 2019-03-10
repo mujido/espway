@@ -5,15 +5,15 @@ PROGRAM_INC_DIR = $(SRC_DIR)
 BUILD_DIR = ./build/
 FIRMWARE_DIR = ./firmware/
 
-ESPBAUD ?= 230400
+ESPBAUD ?= 115200
 FLASH_SIZE ?= 4M
 FLASH_MODE ?= qio
 FLASH_FREQ ?= 80m
-PRINTF_SCANF_FLOAT_SUPPORT ?= 0
+PRINTF_SCANF_FLOAT_SUPPORT ?= 1
 SPLIT_SECTIONS ?= 0
 WARNINGS_AS_ERRORS ?= 0
 
-N_PROCESSES = 5
+N_PROCESSES = 3
 
 EXTRA_COMPONENTS = extras/dhcpserver extras/i2c extras/i2s_dma extras/ws2812_i2s extras/mbedtls extras/httpd
 
